@@ -67,6 +67,52 @@ pipeline {
                 sh '/usr/bin/trivy fs --severity HIGH,CRITICAL --format table -o trivy-fs-report.txt .'
             }
         }
+
+        stage('Build & Push Frontend Image') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: '94545777-a627-498d-9a07-865753dab5b4') {
+                        dir('client') {
+                            sh 'docker build -t shubhamsharma77/frontend:latest .'
+                            sh 'trivy image --format table -o frontend-image-report.html shubhamsharma77/frontend:latest'
+                            sh 'docker push shubhamsharma77/frontend:latest'
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Build & Push Backend Image') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: '94545777-a627-498d-9a07-865753dab5b4') {
+                        dir('api') {
+                            sh 'docker build -t shubhamsharma77/backend:latest .'
+                            sh 'trivy image --format table -o backend-image-report.html shubhamsharma77/backend:latest'
+                            sh 'docker push shubhamsharma77/backend:latest'
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Docker Build via Compose') {
+            steps {
+                sh 'docker-compose up -d'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Pipeline completed successfully!'
+        }
+        failure {
+            echo '❌ Pipeline failed. Check logs.'
+        }
+        always {
+            archiveArtifacts artifacts: '*.txt, *.html', fingerprint: true
+        }
     }
 }
 
